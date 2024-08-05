@@ -428,7 +428,7 @@ function TT:AddInspectInfo(tt, unit, numTries, r, g, b)
 
 		if lastGUID ~= unitGUID then
 			lastGUID = unitGUID
-			NotifyInspect(unit)
+            NotifyInspect(unit)
 			TT:RegisterEvent('INSPECT_READY')
 		else
 			TT:INSPECT_READY(nil, unitGUID)
@@ -540,6 +540,33 @@ function TT:AddMythicInfo(tt, unit)
 	end
 end
 
+function arenaString(mode, unit)
+    local arenaRating, seasonPlayed, seasonWon, a, b = GetInspectArenaData(mode);
+    if (arenaRating) then
+        -- Return "rating (Won / lost)"
+        return string.format("%d (%dW / %dL)", arenaRating, seasonWon, (seasonPlayed - seasonWon));
+    end
+end
+
+function TT:AddPVPInfo(tt, unit)
+    INSPECTED_UNIT = unit;
+    -- Arena rating functions don't take in a unit, they rely on INSPECTED_UNIT mutation instead
+    -- It is not refreshing as expected, see TT:INSPECT_READY in this file
+    NotifyInspect(unit);
+    local honorLevel = UnitHonorLevel(unit)
+    local color = whiteRGB
+    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, cap = GetPersonalRatedInfo(4)
+    local soloShuffleInfo = C_PaperDollInfo.GetInspectRatedSoloShuffleData(unit)
+
+
+    tt:AddDoubleLine(L["Honor Rank"], honorLevel, nil, nil, nil, color.r, color.g, color.b)
+    tt:AddDoubleLine(L["Solo Shuffle"], soloShuffleInfo.rating, nil, nil, nil, color.r, color.g, color.b)
+    local string2v2 = arenaString(1, unit)
+    if string2v2 then
+        tt:AddDoubleLine(L["2v2 Arena"], string2v2, nil, nil, nil, color.r, color.g, color.b)
+    end
+end
+
 function TT:GameTooltip_OnTooltipSetUnit(data)
 	if self ~= GameTooltip or self:IsForbidden() or not TT.db.visibility then return end
 
@@ -582,6 +609,10 @@ function TT:GameTooltip_OnTooltipSetUnit(data)
 
 			if TT.db.mythicDataEnable then
 				TT:AddMythicInfo(self, unit)
+			end
+
+			if TT.db.mythicDataEnable then
+				TT:AddPVPInfo(self, unit)
 			end
 		end
 	end
